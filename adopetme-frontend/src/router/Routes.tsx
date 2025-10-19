@@ -6,12 +6,17 @@ import AboutUsPage from '../pages/AboutUsPage';
 import SearchResultsPage from '../pages/SearchResultsPage';
 import PetDetailsPage from '../pages/PetDetailsPage';
 import LoginPage from '../pages/LoginPage';
+import ReportPage from '../pages/ReportPage';
+import ReportStatusPage from '../pages/ReportStatusPage';
+import ReportFeedbackPage from '../pages/ReportFeedbackPage';
+import OngReportPage from '../pages/OngReportPage';
+import RegisterPage from '../pages/RegisterPage';
 
 
 // Desconsiderar: Estas são páginas de espaço reservado simples.
 // Você substituirá essas definições por componentes reais conforme avança no desenvolvimento.
 // Assinado: Murillo Cardoso :P
-const RegisterPage = () => <div className="p-10 text-center text-xl font-semibold">Página de Registro</div>;
+// const RegisterPage = () => <div className="p-10 text-center text-xl font-semibold">Página de Registro</div>;
 const NotFoundPage = () => <div className="p-10 text-center text-3xl font-bold text-red-600">404 - Página Não Encontrada</div>;
 const AnimalRegistrationPage = () => <div className="p-10 text-center text-xl font-semibold">Página de Registro de Animal (Privada)</div>;
 
@@ -27,7 +32,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/search-results" element={<SearchResultsPage />} />
       <Route path="/about-us" element={<AboutUsPage />} />
       <Route path="/pets/:id" element={<PetDetailsPage />} />
-      <Route path="/report" element={<NotFoundPage />} />
+      <Route path="/report" element={<ReportPage />} />
+  <Route path="/report/:protocol" element={<ReportStatusPage />} />
+        <Route path="/report/feedback/:protocol" element={<ReportFeedbackPage />} />
+        <Route path="/ong/reports" element={<OngReportPage />} />
       
       {/* Rotas de Autenticação */}
       <Route path="/login" element={<LoginPage />} />

@@ -1,14 +1,28 @@
 import React from "react";
-import { PawPrint } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { PawPrint, User } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useSession } from '../context/SessionContext';
 
-const navLinks = [
+// base navLinks kept for NONE session (public)
+const publicLinks = [
   { name: "Home", href: "/" },
   { name: "Buscar Pets", href: "/search" },
   { name: "Sobre nós", href: "/about-us" },
 ];
 
 const Navbar: React.FC = () => {
+  const { session, setSession } = useSession();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('session_type');
+    } catch {}
+    setSession('NONE');
+    navigate('/');
+  };
   const baseClasses =
     "no-underline !text-neutral-50 visited:!text-neutral-50 hover:!text-gray-200 focus:!text-neutral-50 active:!text-neutral-50 font-medium transition duration-150 p-2 rounded-lg";
   const activeClasses = "font-bold";
@@ -24,32 +38,50 @@ const Navbar: React.FC = () => {
             adopet.me
           </span>
         </Link>
-
         <div className="hidden sm:flex space-x-8 items-center">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.name}
-              to={link.href}
-              className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}
-            >
+          {/* Links differ by session */}
+          {session === 'NONE' && publicLinks.map((link) => (
+            <NavLink key={link.name} to={link.href} className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>
               {link.name}
             </NavLink>
           ))}
+
+          {session === 'TUTOR' && (
+            <>
+              <NavLink to="/" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Home</NavLink>
+              <NavLink to="/search" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Buscar Pets</NavLink>
+              <NavLink to="/report" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Denúncias</NavLink>
+              <NavLink to="/about-us" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Sobre nós</NavLink>
+            </>
+          )}
+
+          {session === 'ONG' && (
+            <>
+              <NavLink to="/" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Home</NavLink>
+              <NavLink to="/not-found" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Meus Pets</NavLink>
+              <NavLink to="/ong/reports" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Denúncias</NavLink>
+              <NavLink to="/about-us" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Sobre Nós</NavLink>
+            </>
+          )}
         </div>
 
         <div className="flex space-x-3 items-center">
-          <Link
-            to="/login"
-            className="px-4 py-2 text-sm font-semibold rounded-full !text-neutral-50 hover:!text-gray-200 bg-yellow-500 hover:bg-yellow-700 transition duration-200 no-underline"
-          >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            className="px-4 py-2 text-sm font-semibold rounded-full !text-neutral-50 hover:!text-gray-200 bg-yellow-500 hover:bg-yellow-700 transition duration-200 no-underline"
-          >
-            Registre-se
-          </Link>
+          {session === 'NONE' && (
+            <>
+              <Link to="/login" className="px-4 py-2 text-sm font-semibold rounded-full !text-neutral-50 hover:!text-gray-200 bg-yellow-500 hover:bg-yellow-700 transition duration-200 no-underline">Login</Link>
+              <Link to="/register" className="px-4 py-2 text-sm font-semibold rounded-full !text-neutral-50 hover:!text-gray-200 bg-yellow-500 hover:bg-yellow-700 transition duration-200 no-underline">Registre-se</Link>
+            </>
+          )}
+
+          {session !== 'NONE' && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-white text-black">
+                <User className="w-5 h-5 text-black" />
+                <span className="text-sm font-medium">{session === 'ONG' ? 'Perfil ONG' : 'Perfil Tutor'}</span>
+              </div>
+              <button onClick={handleLogout} className="px-3 py-2 rounded-md bg-transparent border border-white text-white hover:bg-white/10">Sair</button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
