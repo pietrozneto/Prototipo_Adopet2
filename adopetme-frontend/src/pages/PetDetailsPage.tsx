@@ -1,19 +1,79 @@
+// src/pages/PetDetailsPage.tsx
+
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { Pet } from "../models/PetModel";
-import { Heart, Home, PawPrint, Calendar } from "lucide-react";
+import { Heart, Home, PawPrint, Calendar, Image as ImageIcon, MapPin, Loader2 } from "lucide-react";
 import Footer from "../components/Footer";
+import { getPetById } from "../mocks/api";
 
-// Mock de Dados: Em uma aplicação real, faria uma chamada de API usando o 'id'.
-const MOCK_PETS: Pet[] = [
-    { id: 1, nome: "Rex", tipo: "Cachorro", idade: "2 anos" },
-    { id: 2, nome: "Mia", tipo: "Gato", idade: "1 ano" },
-    { id: 3, nome: "Bolt", tipo: "Cachorro", idade: "3 anos" },
-];
+// Componente auxiliar para a imagem com fallback
+const PetImage: React.FC<{ pet: Pet }> = ({ pet }) => {
+    // Define a URL da imagem. Usamos o pet.id para gerar uma imagem consistente se a URL mockada não for válida.
+    const imageUrl = pet.imagem && pet.imagem.includes('placeholder')
+        ? `https://place-puppy.com/300x300?image=${pet.id}` // Tenta uma URL externa para pets mockados
+        : pet.imagem; // Tenta usar a URL fornecida (se for real)
 
+    const [imageError, setImageError] = useState(false);
+
+    // Se o estado de erro for verdadeiro ou se a URL for vazia, exibe o fallback
+    if (imageError || !imageUrl) {
+        return (
+            <div className="w-full h-auto max-w-xs rounded-2xl border-4 border-[#c4742a]/50 shadow-lg mb-6 bg-gray-200 flex flex-col items-center justify-center p-10 aspect-square">
+                <ImageIcon className="w-20 h-20 text-gray-500" />
+                <span className="text-sm text-gray-600 mt-2">Imagem Indisponível</span>
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={imageUrl}
+            alt={pet.nome}
+            onError={() => setImageError(true)}
+            className="w-full h-auto max-w-xs rounded-2xl object-cover border-4 border-[#c4742a]/50 shadow-lg mb-6 aspect-square"
+        />
+    );
+};
+
+// Componente para a seção de detalhes (Info Grid + Descrição)
+const PetDetailsInfo: React.FC<{ pet: Pet }> = ({ pet }) => (
+    <div className="md:w-2/3">
+        <h1 className="text-5xl font-extrabold text-[#3b1f0e] mb-2">{pet.nome}</h1>
+        <p className="text-xl text-[#c4742a] font-semibold mb-6">{pet.tipo}</p>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-4 text-lg text-[#3b1f0e] mb-8">
+            <div className="flex items-center">
+                <Calendar className="mr-2 text-[#c4742a]" size={20} />
+                <span>**Idade:** {pet.idade}</span>
+            </div>
+            <div className="flex items-center">
+                <Home className="mr-2 text-[#c4742a]" size={20} />
+                <span>**Porte:** {pet.porte || 'Não Informado'}</span>
+            </div>
+            <div className="flex items-center">
+                <Heart className="mr-2 text-[#c4742a]" size={20} />
+                <span>**Gênero:** {pet.genero || 'Não Informado'}</span>
+            </div>
+            <div className="flex items-center">
+                <MapPin className="mr-2 text-[#c4742a]" size={20} />
+                <span>**Localização:** {pet.localizacao || '—'}</span>
+            </div>
+        </div>
+
+        {/* Descrição Longa */}
+        <h2 className="text-2xl font-bold text-[#3b1f0e] mb-3">Sobre {pet.nome}</h2>
+        <p className="text-lg leading-relaxed text-[#7b5a3b]">
+            {pet.description || (`${pet.nome} é um(a) ${pet.tipo.toLowerCase()} extremamente dócil e brincalhão(a). Adora longas caminhadas no parque e está à procura de um lar.`)}
+        </p>
+    </div>
+);
+
+
+// Componente principal
 export default function PetDetailsPage() {
-    // Captura o ID do pet da URL (ex: /pets/1)
     const { id } = useParams<{ id: string }>();
     
     const [pet, setPet] = useState<Pet | null>(null);
@@ -21,21 +81,32 @@ export default function PetDetailsPage() {
 
     useEffect(() => {
         setLoading(true);
-        // Simulação de chamada de API: busca o pet pelo ID
-        setTimeout(() => {
+        
+        const fetchPetDetails = async () => {
             const petId = parseInt(id || '0');
-            const foundPet = MOCK_PETS.find(p => p.id === petId) || null;
+            if (petId === 0) {
+                setPet(null);
+                setLoading(false);
+                return;
+            }
+
+            const foundPet = await getPetById(petId);
             
             setPet(foundPet);
             setLoading(false);
-        }, 800);
+        };
+
+        fetchPetDetails();
     }, [id]);
 
-    // Trata estados de carregamento e Pet não encontrado
+    // Trata estados de carregamento
     if (loading) {
         return (
             <div className="min-h-screen w-screen flex items-center justify-center bg-[#FFF8F0]">
-                <p className="text-xl text-[#c4742a]">Carregando detalhes do pet...</p>
+                 <div className="flex items-center gap-3 text-2xl text-[#c4742a] font-semibold">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <p>Carregando detalhes do pet...</p>
+                 </div>
             </div>
         );
     }
@@ -62,62 +133,31 @@ export default function PetDetailsPage() {
                     
                     <div className="p-8 md:p-12 flex flex-col md:flex-row gap-8">
                         
-                        {/* Imagem e Botões */}
+                        {/* Imagem e Botões (Componente de Ação) */}
                         <div className="md:w-1/3 flex flex-col items-center">
-                            <img
-                                src={`https://place-puppy.com/300x300?image=${pet.id}`}
-                                alt={pet.nome}
-                                className="w-full h-auto max-w-xs rounded-2xl object-cover border-4 border-[#c4742a]/50 shadow-lg mb-6"
-                            />
+                            <PetImage pet={pet} /> 
 
                             <button className="w-full max-w-xs px-8 py-3 bg-[#c4742a] hover:bg-[#a75e22] text-neutral-50 font-bold rounded-full transition-all duration-200 flex items-center justify-center mb-4">
                                 <Heart className="mr-2" size={20} /> Adotar {pet.nome}
                             </button>
                             
-                            <button className="w-full max-w-xs px-8 py-3 border border-[#3b1f0e] text-neutral-50 font-bold rounded-full transition-all duration-200 flex items-center justify-center hover:bg-[#3b1f0e] hover:text-white">
+                            <button className="w-full max-w-xs px-8 py-3 border border-[#3b1f0e] text-neutral-900 font-bold rounded-full transition-all duration-200 flex items-center justify-center hover:bg-[#3b1f0e] hover:text-white">
                                 <PawPrint className="mr-2" size={20} /> Favoritar
                             </button>
-                        </div>
-
-                        {/* Detalhes do Pet */}
-                        <div className="md:w-2/3">
-                            <h1 className="text-5xl font-extrabold text-[#3b1f0e] mb-2">{pet.nome}</h1>
-                            <p className="text-xl text-[#c4742a] font-semibold mb-6">{pet.tipo}</p>
-
-                            <div className="grid grid-cols-2 gap-4 text-lg text-[#3b1f0e] mb-8">
-                                <div className="flex items-center">
-                                    <Calendar className="mr-2 text-[#c4742a]" size={20} />
-                                    <span>**Idade:** {pet.idade}</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <Home className="mr-2 text-[#c4742a]" size={20} />
-                                    <span>**Porte:** Médio</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <Heart className="mr-2 text-[#c4742a]" size={20} />
-                                    <span>**Gênero:** Fêmea</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <PawPrint className="mr-2 text-[#c4742a]" size={20} />
-                                    <span>**Raça:** SRD</span>
-                                </div>
-                            </div>
                             
-                            {/* Descrição Longa */}
-                            <h2 className="text-2xl font-bold text-[#3b1f0e] mb-3">Sobre {pet.nome}</h2>
-                            <p className="text-lg leading-relaxed text-[#7b5a3b]">
-                                {pet.nome} é um(a) {pet.tipo.toLowerCase()} extremamente dócil e brincalhão(a). 
-                                Adora longas caminhadas no parque e se dá muito bem com crianças e outros animais. 
-                                Ele(a) está à procura de um lar para chamar de seu. É vacinado(a) e castrado(a). 
-                                Sua energia é contagiante e ele(a) trará muita alegria para sua família!
-                            </p>
+                            <div className="mt-6 text-center">
+                                <p className="text-sm font-semibold text-[#3b1f0e]">Responsável pela Adoção:</p>
+                                <p className="text-base text-[#c4742a]">{pet.ONG || 'ONG Adopet Mock'}</p>
+                            </div>
                         </div>
+
+                        {/* Detalhes do Pet (Componente de Informação) */}
+                        <PetDetailsInfo pet={pet} />
+                        
                     </div>
 
                 </div>
             </main>
-
-            {/* Rodapé com logo */}
             <Footer />
         </div>
     );

@@ -1,140 +1,146 @@
-// src/pages/LoginPage.tsx
+// matheus-de-andrade-lourenco/prototipo_adopet/Prototipo_Adopet-83121f52595e1e8153395d49fca8b2dc2b85a109/adopetme-frontend/src/pages/LoginPage.tsx 
+
 import React, { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import { loginMock } from "../mocks/api";
 import { FaPaw, FaUsers } from 'react-icons/fa';
 import { useSession } from '../context/SessionContext';
+import { Loader2 } from 'lucide-react'; 
 
 const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null);
-  const { session, setSession } = useSession();
-  // Ensure at least one of the role buttons is selected when the page loads.
-  // Default to 'TUTOR' to avoid empty selection causing login errors.
-  const [localSelection, setLocalSelection] = useState<typeof session>(() => {
-    return session === 'ONG' || session === 'TUTOR' ? session : 'TUTOR';
-  });
+    const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [remember, setRemember] = useState(false);
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null);
+    const { session, setSession, setUserName } = useSession(); 
+    
+    const [localSelection, setLocalSelection] = useState<typeof session>(() => {
+        return session === 'ONG' || session === 'TUTOR' ? session : 'TUTOR';
+    });
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+    const handleLogin = async (e: FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
 
-    try {
-      const res = await loginMock(email, password);
-      // Armazenar token em localStorage para simulação
-      localStorage.setItem("token", res.token);
-      localStorage.setItem("user_email", res.user.email);
-      // set session based on role returned by mock
-      setSession(res.user.role === 'ONG' ? 'ONG' : 'TUTOR');
-      navigate("/");
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Nome de usuário ou senha incorretos");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+        try {
+            const res = await loginMock(email, password);
+            
+            // Armazenando informações da sessão e o nome do usuário
+            localStorage.setItem("token", res.token);
+            localStorage.setItem("user_email", res.user.email);
+            localStorage.setItem("user_name", res.user.name); 
 
-  
+            // Atualiza o estado do React Context para exibir o nome na Navbar
+            setUserName(res.user.name); 
+            
+            setSession(res.user.role === 'ONG' ? 'ONG' : 'TUTOR');
+            navigate("/");
+        } catch (error) {
+            if (error instanceof Error) {
+                setError(error.message);
+            } else {
+                setError("Nome de usuário ou senha incorretos");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <div className="min-h-screen w-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow flex justify-center items-center">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-          <h1 className="text-xl text-neutral-950 font-bold mb-6 text-center">
-            Bem-Vindo de Volta!
-          </h1>
-          {error && <div className="text-red-600 mb-3 text-sm text-center">{error}</div>}
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            <div className="flex gap-3 justify-center mb-2">
-              <button
-                type="button"
-                onClick={() => { setLocalSelection('ONG'); }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md border border-black`}
-                style={{ backgroundColor: localSelection === 'ONG' ? '#000000' : '#ffffff', color: localSelection === 'ONG' ? '#ffffff' : '#000000' }}
-              >
-                <FaUsers style={{ color: localSelection === 'ONG' ? '#ffffff' : '#000000' }} />
-                <span style={{ color: localSelection === 'ONG' ? '#ffffff' : '#000000' }}>ONG</span>
-              </button>
+    return (
+        <div className="min-h-screen w-screen flex flex-col bg-gray-50">
+            <Navbar />
+            <main className="flex-grow flex justify-center items-start py-12">
+                <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                    <h1 className="text-2xl font-bold text-center mb-6 text-black">Bem-Vindo de Volta!</h1>
 
-              <button
-                type="button"
-                onClick={() => { setLocalSelection('TUTOR'); }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md border border-black`}
-                style={{ backgroundColor: localSelection === 'TUTOR' ? '#000000' : '#ffffff', color: localSelection === 'TUTOR' ? '#ffffff' : '#000000' }}
-              >
-                <FaPaw style={{ color: localSelection === 'TUTOR' ? '#ffffff' : '#000000' }} />
-                <span style={{ color: localSelection === 'TUTOR' ? '#ffffff' : '#000000' }}>Tutor</span>
-              </button>
-            </div>
-            <input
-              type="email"
-              placeholder="E-mail"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border-2 border-yellow-600 text-neutral-950 p-2 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
-            <input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="border-2 border-yellow-600 text-neutral-950 p-2 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
+                    {/* Botões de Seleção de Perfil (ONG/Tutor) */}
+                    <div className="flex items-center justify-center gap-6 mb-6">
+                        <button
+                            type="button"
+                            onClick={() => setLocalSelection('ONG')}
+                            // Usando bg-amber-600 para seleção
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-amber-600 transition duration-200 ${localSelection === 'ONG' ? 'bg-amber-600 text-white shadow-md' : 'bg-white text-black hover:bg-amber-50'}`}
+                        >
+                            {/* Cor do ícone ajustada via classe condicional */}
+                            <FaUsers className={`w-5 h-5 ${localSelection === 'ONG' ? 'text-white' : 'text-black'}`} />
+                            <span className="font-semibold">ONG</span>
+                        </button>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-neutral-950">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="accent-yellow-600"
-                />
-                Lembrar senha
-              </label>
-              <span
-                className="text-yellow-600 hover:underline cursor-pointer"
-                onClick={() => navigate("/recuperar-senha")}
-              >
-                Esqueci minha senha
-              </span>
-            </div>
+                        <button
+                            type="button"
+                            onClick={() => setLocalSelection('TUTOR')}
+                            // Usando bg-amber-600 para seleção
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-amber-600 transition duration-200 ${localSelection === 'TUTOR' ? 'bg-amber-600 text-white shadow-md' : 'bg-white text-black hover:bg-amber-50'}`}
+                        >
+                            {/* Cor do ícone ajustada via classe condicional */}
+                            <FaPaw className={`w-5 h-5 ${localSelection === 'TUTOR' ? 'text-white' : 'text-black'}`} />
+                            <span className="font-semibold">Tutor</span>
+                        </button>
+                    </div>
+                    
+                    {error && <div className="text-red-600 mb-4 text-sm text-center bg-red-100 p-2 rounded border border-red-200">{error}</div>}
 
-            <button
-              type="submit"
-              className="bg-yellow-600 text-white py-2 rounded hover:bg-yellow-700 transition"
-            >
-              Login
-            </button>
-          </form>
+                    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                        <input
+                            type="email"
+                            placeholder="E-mail"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="border-2 border-yellow-600/50 p-3 rounded focus:outline-none text-black placeholder:text-gray-400 focus:ring-2 focus:ring-yellow-500"
+                            required
+                        />
 
-          
+                        <input
+                            type="password"
+                            placeholder="Senha"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="border-2 border-yellow-600/50 p-3 rounded focus:outline-none text-black placeholder:text-gray-400 focus:ring-2 focus:ring-yellow-500"
+                            required
+                        />
 
-          <p className="text-center mt-4 text-sm text-neutral-950">
-            Não tem uma conta?{" "}
-            <span
-              className="text-yellow-600 hover:underline cursor-pointer"
-              onClick={() => navigate("/register")}
-            >
-              Registre-se
-            </span>
-          </p>
+                        <div className="flex justify-between items-center text-sm text-neutral-700">
+                            <label className="flex items-center gap-2">
+                                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-yellow-600" />
+                                Lembrar de mim
+                            </label>
+                            <button 
+                                type="button" 
+                                onClick={() => navigate('/recuperar-senha')} 
+                                className="text-amber-700 hover:underline transition"
+                            >
+                                Esqueci minha senha
+                            </button>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            className="bg-amber-800 text-white py-3 rounded font-bold hover:bg-amber-900 transition mt-2 shadow-lg flex items-center justify-center gap-2" 
+                            disabled={loading}
+                        >
+                            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                            {loading ? 'Entrando...' : 'Login'}
+                        </button>
+
+                        <div className="text-center text-sm text-neutral-700 mt-3">
+                            Não tem uma conta? <span 
+                                onClick={() => navigate('/register')} 
+                                className="text-amber-700 hover:underline cursor-pointer font-medium"
+                            >
+                                Registre-se
+                            </span>
+                        </div>
+                    </form>
+                </div>
+            </main>
+            <Footer />
         </div>
-      </main>
-    </div>
-  );
+    );
 };
 
 export default LoginPage;

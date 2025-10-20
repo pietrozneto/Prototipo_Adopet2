@@ -1,22 +1,60 @@
-import React, { useState } from "react";
+// src/pages/SearchPage.tsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { Search } from "lucide-react";
+import { Search, PawPrint, Cat, Loader2 } from "lucide-react"; // Importamos Loader2 para o loading
 import Footer from "../components/Footer";
+import { Pet } from "../models/PetModel";
+import { searchPets } from "../mocks/api"; // Importamos a função de busca
 
 const SearchPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  // Novo estado para armazenar e exibir os resultados recentes (populados pela API)
+  const [recentResults, setRecentResults] = useState<Pet[]>([]);
+  const [loadingRecents, setLoadingRecents] = useState(true);
+
+  // Efeito para carregar pets iniciais na primeira vez que a página é montada
+  useEffect(() => {
+    const fetchInitialPets = async () => {
+      setLoadingRecents(true);
+      try {
+        // Busca com query vazia para retornar um subconjunto de todos os pets mockados
+        const pets = await searchPets(""); 
+        setRecentResults(pets.slice(0, 6)); // Limita a 6 resultados para não lotar a tela
+      } catch (e) {
+        console.error("Falha ao carregar pets recentes:", e);
+        setRecentResults([]);
+      } finally {
+        setLoadingRecents(false);
+      }
+    };
+
+    fetchInitialPets();
+  }, []); // Array de dependência vazio: executa apenas uma vez na montagem
 
   function handleSearch() {
     if (searchQuery.trim() === "") return;
-    console.log("Busca simulada por:", searchQuery);
+    console.log("Busca iniciada por:", searchQuery);
+    // Redireciona para a página de resultados, que chamará a API novamente com o termo
     navigate(`/search-results?q=${encodeURIComponent(searchQuery)}`);
   }
 
   function handleKeyPress(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") handleSearch();
   }
+
+  // Função para determinar o ícone baseado no tipo de pet
+  const getPetIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'cachorro':
+        return <PawPrint className="w-8 h-8 text-[#3b1f0e]" />;
+      case 'gato':
+        return <Cat className="w-8 h-8 text-[#3b1f0e]" />;
+      default:
+        return <PawPrint className="w-8 h-8 text-[#3b1f0e]" />;
+    }
+  };
 
   return (
     <div className="min-h-screen w-screen flex flex-col bg-[#FFF8F0] overflow-x-hidden">
@@ -30,7 +68,7 @@ const SearchPage: React.FC = () => {
                 🐾 Encontre seu novo melhor amigo
               </h1>
               <p className="text-lg text-[#7b5a3b] max-w-2xl mx-auto">
-                Utilize a busca abaixo para encontrar o pet perfeito para você.
+                Utilize a busca abaixo ou confira alguns dos pets disponíveis recentemente.
               </p>
             </header>
 
@@ -50,29 +88,41 @@ const SearchPage: React.FC = () => {
                 </div>
                 <button
                   onClick={handleSearch}
-                  className="px-8 py-3 bg-[#c4742a] hover:bg-[#a75e22] text-white font-bold rounded-full transition-all duration-200"
+                  // Desabilita o botão se a busca estiver vazia (melhor UX)
+                  disabled={searchQuery.trim() === ""} 
+                  className="px-8 py-3 bg-[#c4742a] hover:bg-[#a75e22] text-white font-bold rounded-full transition-all duration-200 disabled:opacity-50"
                 >
                   Buscar
                 </button>
               </div>
             </section>
 
-            {/* Resultados simulados */}
+            {/* Resultados recentes */}
             <section className="mt-16 w-full max-w-6xl">
               <h2 className="text-2xl font-bold text-[#3b1f0e] mb-6">
-                Resultados recentes
+                Pets em Destaque
               </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-                {["Luna 🐶", "Milo 🐱", "Tobby 🐕"].map((pet, index) => (
-                  <div
-                    key={index}
-                    className="h-48 bg-white border border-[#c4742a]/30 rounded-xl flex items-center justify-center text-[#3b1f0e] font-medium shadow-sm hover:shadow-md hover:scale-[1.02] transition-all"
-                  >
-                    {pet}
-                  </div>
-                ))}
-              </div>
+              {loadingRecents ? (
+                <div className="flex justify-center py-10">
+                    <Loader2 className="w-8 h-8 text-[#c4742a] animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                  {recentResults.map((pet) => (
+                    <div
+                      key={pet.id}
+                      onClick={() => navigate(`/pets/${pet.id}`)} // Permite clicar e ir para detalhes
+                      className="bg-white border border-[#c4742a]/30 rounded-xl flex flex-col items-center justify-center p-4 text-[#3b1f0e] font-medium shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer h-36"
+                    >
+                      {getPetIcon(pet.tipo)}
+                      <span className="mt-2 text-base font-semibold text-center">{pet.nome}</span>
+                      <span className="text-xs text-gray-500">{pet.tipo} ({pet.idade})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
             </section>
         </div>
       </main>

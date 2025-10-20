@@ -1,41 +1,62 @@
+// src/pages/RecoveryPage.tsx
+
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-
-// Importe o Navbar e o ícone do Google se necessário. 
-// Para este exemplo, vamos manter apenas o ícone de e-mail.
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
-// import Navbar from '../components/Navbar'; // Mantenha comentado por enquanto para evitar o loop!
+import Footer from '../components/Footer';
+import { Mail, Loader2 } from 'lucide-react';
+import { recoverPassword } from '../mocks/api';
 
 const RecoveryPage: React.FC = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
-    const [message, setMessage] = useState(''); // Estado para feedback ao usuário
+    const [message, setMessage] = useState<string | null>(null); // Usando null para estado inicial limpo
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setEmail(e.target.value);
+        setMessage(null); // Limpa mensagens ao digitar
     };
 
     const handleRecovery = (e: FormEvent) => {
         e.preventDefault();
+        setMessage(null);
         
-        // Simulação de envio para o backend
-        console.log('Solicitação de recuperação para:', email);
-        setMessage(`Se as informações estiverem corretas, as instruções foram enviadas para ${email}.`);
-        
-        // Opcional: Redirecionar para uma página de confirmação após um pequeno atraso
-        // setTimeout(() => navigate('/login'), 3000); 
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setMessage("Por favor, insira um e-mail válido.");
+            return;
+        }
+
+        setLoading(true);
+
+        (async () => {
+            try {
+                // Simulação de envio usando o mock
+                const success = await recoverPassword(email);
+                setLoading(false);
+
+                if (success) {
+                    setMessage(`Instruções de redefinição foram enviadas para ${email}. Verifique sua caixa de entrada.`);
+                    // Redireciona para o login após 3 segundos
+                    setTimeout(() => navigate('/login'), 3000); 
+                } else {
+                    setMessage("E-mail não encontrado. Verifique o endereço e tente novamente.");
+                }
+            } catch (error) {
+                setLoading(false);
+                setMessage("Ocorreu um erro na solicitação. Tente novamente mais tarde.");
+            }
+        })();
     };
 
     return (
         <div className="min-h-screen w-screen flex flex-col bg-gray-100">
             <Navbar />
 
-            <main className="flex-grow flex justify-center items-center">
+            <main className="flex-grow flex justify-center items-center p-6">
                 <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
                     
-                    <h1 className="text-2xl font-bold mb-3 text-center text-neutral-950">
+                    <h1 className="text-3xl font-bold mb-4 text-center text-neutral-950">
                         Recuperar Senha
                     </h1>
                     
@@ -45,7 +66,7 @@ const RecoveryPage: React.FC = () => {
 
                     {/* Mensagem de Feedback */}
                     {message && (
-                        <div className={`p-3 mb-4 rounded text-sm ${message.includes('enviadas') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <div className={`p-3 mb-4 rounded text-sm font-medium ${message.includes('enviadas') ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
                             {message}
                         </div>
                     )}
@@ -54,30 +75,33 @@ const RecoveryPage: React.FC = () => {
                         
                         {/* Campo de E-mail */}
                         <div className="relative">
-                            <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            {/* 👈 Usando Lucide: Mail */}
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-600 w-5 h-5" />
                             <input
                                 type="email"
                                 placeholder="Seu e-mail cadastrado"
                                 value={email}
                                 onChange={handleChange}
                                 required
-                                className="border-2 border-yellow-600 pl-10 pr-4 text-neutral-950 p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                className="border-2 border-yellow-600/50 pl-10 pr-4 text-neutral-950 p-3 rounded w-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
                             />
                         </div>
 
                         {/* Botão de Envio */}
                         <button
                             type="submit"
-                            className="bg-yellow-600 text-white py-2 px-4 rounded font-semibold hover:bg-yellow-700 transition"
+                            className="bg-amber-800 text-white py-3 px-4 rounded font-semibold hover:bg-amber-900 transition shadow-lg flex items-center justify-center gap-2"
+                            disabled={loading}
                         >
-                            Enviar Instruções
+                            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                            {loading ? 'Enviando...' : 'Enviar Instruções'}
                         </button>
                         
                     </form>
 
                     <p className="text-center mt-6 text-sm">
                         <span
-                            className="text-yellow-600 hover:underline cursor-pointer"
+                            className="text-amber-700 hover:underline cursor-pointer font-medium"
                             onClick={() => navigate("/login")}
                         >
                             Voltar para o Login
@@ -85,6 +109,7 @@ const RecoveryPage: React.FC = () => {
                     </p>
                 </div>
             </main>
+            <Footer />
         </div>
     );
 };

@@ -1,15 +1,85 @@
-import { Pet } from "../models/PetModel";
-import { MOCK_PETS } from "./data";
+// matheus-de-andrade-lourenco/prototipo_adopet/Prototipo_Adopet-83121f52595e1e8153395d49fca8b2dc2b85a109/adopetme-frontend/src/mocks/api.ts (REESCRITO)
+
+import { Pet } from "../models/PetModel"; 
+import { MOCK_PETS } from "./data"; 
+import { UserRecord, AccountRole } from "../models/UserModel"; 
 
 const delay = (ms = 500) => new Promise((res) => setTimeout(res, ms));
 
+// --- Tipos Exportáveis para uso no Front-end ---
+// Usando lookup types para derivar os tipos estritos do PetModel
+export type PetType = Pet['tipo'];
+export type PetGender = Pet['genero'];
+export type PetSize = Pet['porte'];
+
+// PetRegistrationData agora usa os tipos estritos do PetModel
+export type PetRegistrationData = Omit<Pet, 'id' | 'localizacao' | 'imagem' | 'adotado' | 'ONG'>;
+
+// --- Função Mock para registrar um Pet ---
+export async function registerPetMock(data: PetRegistrationData): Promise<number> {
+  await delay(700);
+
+  // Lógica para gerar um ID único
+  const newId = MOCK_PETS.length > 0 ? Math.max(...MOCK_PETS.map(p => p.id)) + 1 : 1;
+
+  // CONSTRUÇÃO DO OBJETO USANDO A INTERFACE PET COMPLETA
+  const newPet: Pet = {
+    id: newId,
+    nome: data.nome,
+    tipo: data.tipo,
+    idade: data.idade,
+    genero: data.genero,
+    porte: data.porte,
+    
+    // CAMPOS FIXOS (MOCKED) QUE NÃO VIERAM DO FORMULÁRIO:
+    localizacao: 'São Paulo/SP', 
+    description: data.description, 
+    imagem: '/assets/new_pet_placeholder.jpg', 
+    adotado: false,
+    ONG: 'ONG Mock de Teste', 
+  };
+
+  // Adiciona o novo pet à lista em memória
+  MOCK_PETS.push(newPet); 
+
+  return newId;
+}
+
+// --- Busca de Pets (Mantida) ---
 export async function searchPets(query: string): Promise<Pet[]> {
   await delay(800);
   const q = query.trim().toLowerCase();
   if (!q) return MOCK_PETS.slice(0, 6);
-  return MOCK_PETS.filter(
-    (p) => p.nome.toLowerCase().includes(q) || p.tipo.toLowerCase().includes(q)
+
+  const normalizedQuery = q;
+
+  // 1. Filtrar resultados que contenham a consulta no nome ou tipo
+  const results = MOCK_PETS.filter(
+    (p) =>
+      p.nome.toLowerCase().includes(normalizedQuery) ||
+      p.tipo.toLowerCase().includes(normalizedQuery)
   );
+
+  // 2. Lógica de Ordenação Customizada: Priorizar 'starts with'
+  results.sort((a, b) => {
+    const aNomeLower = a.nome.toLowerCase();
+    const bNomeLower = b.nome.toLowerCase();
+    const aTipoLower = a.tipo.toLowerCase();
+    const bTipoLower = b.tipo.toLowerCase();
+
+    const aStarts = aNomeLower.startsWith(normalizedQuery) || aTipoLower.startsWith(normalizedQuery);
+    const bStarts = bNomeLower.startsWith(normalizedQuery) || bTipoLower.startsWith(normalizedQuery);
+
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+
+    if (aNomeLower < bNomeLower) return -1;
+    if (aNomeLower > bNomeLower) return 1;
+
+    return 0;
+  });
+
+  return results;
 }
 
 export async function getPetById(id: number): Promise<Pet | null> {
@@ -17,52 +87,62 @@ export async function getPetById(id: number): Promise<Pet | null> {
   return MOCK_PETS.find((p) => p.id === id) || null;
 }
 
-// Separate in-memory user stores for ONG and TUTOR
-const userStoreONG: Record<string, string> = {
-  'admin@adopetme.com': 'admin123',
-};
-const userStoreTUTOR: Record<string, string> = {
-  'admin@adopetme.com': 'admin123',
+// --- Definição de Usuário e MOCK Store (Restante do arquivo omitido para brevidade) ---
+const userStore: Record<string, UserRecord> = {
+    'tutor@adopetme.com': { name: 'Tutor Mock', email: 'tutor@adopetme.com', cpf: '000.000.000-00', password: 'admin123', role: 'TUTOR' },
+    'ong@adopetme.com': { name: 'ONG Mock', email: 'ong@adopetme.com', cpf: '00.000.000/0000-00', password: 'admin123', role: 'ONG' },
 };
 
-export type AccountRole = 'ONG' | 'TUTOR';
+// ... (Restante das funções de autenticação e denúncia) ...
 
-export async function registerMock(email: string, password: string, role: AccountRole): Promise<boolean> {
+export async function registerMock(name: string, email: string, cpf: string, password: string, role: AccountRole): Promise<boolean> {
   await delay(500);
-  if (!email || !password) return false;
-  if (role === 'ONG') userStoreONG[email] = password;
-  else userStoreTUTOR[email] = password;
+
+  if (userStore[email]) throw new Error('Este e-mail já está em uso.');
+  const isValidEmailFormat = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!isValidEmailFormat(email)) throw new Error('Formato de e-mail inválido.');
+  const isValidCPFFormat = (cpf: string) => { const numbers = cpf.replace(/[^\d]/g, ''); return numbers.length === 11; };
+  if (role === 'TUTOR' && !isValidCPFFormat(cpf)) throw new Error('Formato de CPF inválido.');
+  
+  const newUser: UserRecord = { name, email, cpf, password, role };
+  userStore[email] = newUser;
+  
   return true;
 }
 
-export async function loginMock(email: string, password: string): Promise<{ token: string; user: { email: string; role: AccountRole } }>{
+export async function loginMock(email: string, password: string): Promise<{ token: string; user: { name: string; email: string; role: AccountRole } }>{
   await delay(700);
-  const storedOng = userStoreONG[email];
-  if (storedOng && storedOng === password) return { token: 'mock-token-123', user: { email, role: 'ONG' } };
+  
+  const user = userStore[email];
 
-  const storedTutor = userStoreTUTOR[email];
-  if (storedTutor && storedTutor === password) return { token: 'mock-token-123', user: { email, role: 'TUTOR' } };
+  if (user && user.password === password) {
+    return { 
+      token: 'mock-token-123', 
+      user: { 
+        name: user.name, 
+        email: user.email, 
+        role: user.role 
+      } 
+    };
+  }
 
-  // not found or password mismatch
   throw new Error('Nome de usuário ou senha incorretos');
 }
 
 export async function recoverPassword(email: string): Promise<boolean> {
   await delay(500);
-  // Simula sucesso sempre que o formato for de e-mail
-  return /@/.test(email);
+  return !!userStore[email];
 }
 
-// --- Simple reports store for the denúncias feature (mocked) ---
 export interface ReportRecord {
   protocol: string;
   type: string;
   location: string;
   description: string;
-  images: string[]; // image URLs (can be empty strings when placeholder will be shown)
+  images: string[]; 
   createdAt: string;
   status: string;
-  reporterEmail?: string; // empty or undefined when anonymous
+  reporterEmail?: string; 
   anonymous?: boolean;
 }
 
@@ -99,7 +179,6 @@ export async function getReportByProtocol(protocol: string): Promise<ReportRecor
 
 export async function getAllReports(): Promise<ReportRecord[]> {
   await delay(400);
-  // return a copy
   return reportsStore.slice().reverse();
 }
 
@@ -119,7 +198,6 @@ export async function searchReports(options: { protocol?: string; type?: string 
 
 export async function createReportMock(data: Omit<ReportRecord, 'protocol' | 'createdAt' | 'status'>): Promise<string> {
   await delay(700);
-  // create protocol like RPT-00XX
   const nextId = (reportsStore.length + 1).toString().padStart(4, '0');
   const protocol = `RPT-${nextId}`;
   const rec: ReportRecord = {

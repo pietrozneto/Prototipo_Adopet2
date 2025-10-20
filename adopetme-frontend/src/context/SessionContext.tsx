@@ -5,6 +5,8 @@ export type SessionType = "ONG" | "TUTOR" | "NONE";
 interface SessionContextType {
   session: SessionType;
   setSession: (s: SessionType) => void;
+  userName: string | null; // 👈 NOVO: Nome do usuário
+  setUserName: (name: string | null) => void; // 👈 NOVO: Setter para o nome
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -12,16 +14,14 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSessionState] = useState<SessionType>(() => {
     try {
-      // During development/testing we prefer to start in NONE so the prototype
-      // always begins without an active session. In production we honor
-      // previously persisted session_type.
-      try {
-        // @ts-ignore - import.meta is injected by Vite; guard with try/catch
-        if (import.meta && import.meta.env && import.meta.env.DEV) {
-          try { localStorage.removeItem('session_type'); } catch {}
+      // @ts-ignore
+      if (import.meta && import.meta.env && import.meta.env.DEV) {
+          try { 
+              localStorage.removeItem('session_type'); 
+              localStorage.removeItem('user_name'); // Limpa nome em DEV
+          } catch {}
           return 'NONE';
-        }
-      } catch {}
+      }
 
       const stored = localStorage.getItem("session_type");
       if (stored === "ONG" || stored === "TUTOR") return stored;
@@ -31,23 +31,46 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
+  // Estado para o nome do usuário
+  const [userName, setUserName] = useState<string | null>(() => {
+    try {
+        return localStorage.getItem("user_name") || null;
+    } catch {
+        return null;
+    }
+  });
+
+
   useEffect(() => {
     try {
-      // only persist real sessions
       if (session === 'NONE') {
         localStorage.removeItem('session_type');
+        localStorage.removeItem('user_name');
+        setUserName(null);
       } else {
         localStorage.setItem("session_type", session);
+        // Garante que o nome salvo localmente seja o nome do estado
+        if (userName) localStorage.setItem("user_name", userName);
       }
     } catch (e) {
       // ignore
     }
-  }, [session]);
+  }, [session, userName]);
 
   const setSession = (s: SessionType) => setSessionState(s);
+  // Não precisamos de um setter aqui, mas incluímos no Type. A lógica de setar o nome
+  // é feita no login/register e no useEffect.
+
+  const contextValue = React.useMemo(() => ({
+      session,
+      setSession,
+      userName,
+      setUserName // Incluído, mas o uso principal é interno e no login/register
+  }), [session, userName]);
+
 
   return (
-    <SessionContext.Provider value={{ session, setSession }}>
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );

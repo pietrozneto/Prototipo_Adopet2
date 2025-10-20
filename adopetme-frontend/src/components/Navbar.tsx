@@ -1,3 +1,5 @@
+// matheus-de-andrade-lourenco/prototipo_adopet/Prototipo_Adopet-83121f52595e1e8153395d49fca8b2dc2b85a109/adopetme-frontend/src/components/Navbar.tsx
+
 import React from "react";
 import { PawPrint, User } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
@@ -7,11 +9,13 @@ import { useSession } from '../context/SessionContext';
 const publicLinks = [
   { name: "Home", href: "/" },
   { name: "Buscar Pets", href: "/search" },
+  { name: "Denúncias", href: "/report" }, // Link de Denúncias incluído para sessão NONE
   { name: "Sobre nós", href: "/about-us" },
 ];
 
 const Navbar: React.FC = () => {
-  const { session, setSession } = useSession();
+  // Obtendo userName e setUserName do contexto da sessão
+  const { session, setSession, userName } = useSession(); 
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -19,10 +23,12 @@ const Navbar: React.FC = () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user_email');
       localStorage.removeItem('session_type');
+      localStorage.removeItem('user_name'); // Remoção do nome ao sair
     } catch {}
     setSession('NONE');
     navigate('/');
   };
+  
   const baseClasses =
     "no-underline !text-neutral-50 visited:!text-neutral-50 hover:!text-gray-200 focus:!text-neutral-50 active:!text-neutral-50 font-medium transition duration-150 p-2 rounded-lg";
   const activeClasses = "font-bold";
@@ -39,13 +45,14 @@ const Navbar: React.FC = () => {
           </span>
         </Link>
         <div className="hidden sm:flex space-x-8 items-center">
-          {/* Links differ by session */}
+          {/* Links para sessão NONE (Público) */}
           {session === 'NONE' && publicLinks.map((link) => (
             <NavLink key={link.name} to={link.href} className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>
               {link.name}
             </NavLink>
           ))}
 
+          {/* Links para sessão TUTOR */}
           {session === 'TUTOR' && (
             <>
               <NavLink to="/" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Home</NavLink>
@@ -55,10 +62,12 @@ const Navbar: React.FC = () => {
             </>
           )}
 
+          {/* Links para sessão ONG */}
           {session === 'ONG' && (
             <>
               <NavLink to="/" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Home</NavLink>
-              <NavLink to="/not-found" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Meus Pets</NavLink>
+              <NavLink to="/search" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Buscar Pets</NavLink>
+              <NavLink to="/register-animal" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Adicionar Pet</NavLink>
               <NavLink to="/ong/reports" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Denúncias</NavLink>
               <NavLink to="/about-us" className={({ isActive }) => `${baseClasses} ${isActive ? activeClasses : ""}`}>Sobre Nós</NavLink>
             </>
@@ -66,6 +75,7 @@ const Navbar: React.FC = () => {
         </div>
 
         <div className="flex space-x-3 items-center">
+          {/* Botões de Login/Registro (Sessão NONE) */}
           {session === 'NONE' && (
             <>
               <Link to="/login" className="px-4 py-2 text-sm font-semibold rounded-full !text-neutral-50 hover:!text-gray-200 bg-yellow-500 hover:bg-yellow-700 transition duration-200 no-underline">Login</Link>
@@ -73,11 +83,13 @@ const Navbar: React.FC = () => {
             </>
           )}
 
+          {/* Perfil Logado (TUTOR ou ONG) */}
           {session !== 'NONE' && (
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-white text-black">
                 <User className="w-5 h-5 text-black" />
-                <span className="text-sm font-medium">{session === 'ONG' ? 'Perfil ONG' : 'Perfil Tutor'}</span>
+                {/* Exibe o nome do usuário (ou o fallback de Perfil) */}
+                <span className="text-sm font-medium">{userName || (session === 'ONG' ? 'Perfil ONG' : 'Perfil Tutor')}</span> 
               </div>
               <button onClick={handleLogout} className="px-3 py-2 rounded-md bg-transparent border border-white text-white hover:bg-white/10">Sair</button>
             </div>
